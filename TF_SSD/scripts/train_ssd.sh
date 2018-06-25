@@ -1,0 +1,11 @@
+python ./src/train_ssd.py \
+--dataset=VKITTI \
+--data_path=./data/VKITTI \
+--image_set=train \
+--train_dir=./logs/SSD/train \
+--pretrained_model_path=./data/pretrain/SSD_VGG_16.pkl \
+--net=SSD \
+--checkpoint_step=3000 \
+--gpu=0 \
+--restore_dir=./logs/SSD/model_save \
+--max_steps=300000

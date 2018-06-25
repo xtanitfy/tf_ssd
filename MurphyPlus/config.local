@@ -1,0 +1,53 @@
+##############################################
+# MurphyPlus   X86     
+##############################################
+PLATFORM = X86
+
+PROJECT_DIR_ = .
+
+ifeq ($(P),)
+	PRODUCT = MY_PROJECT
+endif
+
+ifeq ($(PLATFORM),X86)
+NFS_PATH       =
+LIB_PATH       = $(PROJECT_DIR_)/build/lib
+INCLUDE_PATH   = $(PROJECT_DIR_)/include
+CROSS_COMPILER =
+
+endif
+
+######################################################################
+# Automatically generated configuration file, please don't edit
+######################################################################
+
+#LSP_DIR = ../..
+ 
+LSP_INCLUDE_DIR = $(LSP_DIR)/include
+ 
+AS = $(CROSS_COMPILER)as
+ 
+LD = $(CROSS_COMPILER)ld
+ 
+CC = $(CROSS_COMPILER)gcc
+ 
+CPP= $(CROSS_COMPILER)g++
+ 
+AR = $(CROSS_COMPILER)ar
+ 
+NM = $(CROSS_COMPILER)nm
+
+RANLIB = $(CROSS_COMPILER)ranlib
+ 
+STRIP = $(CROSS_COMPILER)strip
+ 
+OBJDUMP = $(CROSS_COMPILER)objdump
+
+CP   =cp
+RM   =rm
+TYPE = release
+MAKE = make
+
+CFLAGS = -std=c99 -lm -O2
+
+
