@@ -3,6 +3,7 @@
     
     1.2 put the VGG_ILSVRC_16_layers_fc_reduced.caffemodel and VGG_ILSVRC_16_layers_fc_reduced_deploy.prototxt into caffemodel then run:
       $./ssdVgg2pkl.sh
+      [vggnet download] (https://download.csdn.net/download/fireworkpark/10104507)
 
 # 2.convert dataset:
     2.1 $cd data/VKITTI 
