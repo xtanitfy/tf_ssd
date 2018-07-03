@@ -5,10 +5,10 @@
       $./ssdVgg2pkl.sh
 
 # 2.convert dataset:
-    $cd data/VKITTI 
+    2.1 $cd data/VKITTI 
     
-    Specify the path of the voc in voc2kitti.py then run:
+    2.2 Specify the path of the voc in voc2kitti.py then run:
       $pyhton voc2kitti.py
     
 # 3.start train:
-   ./scripts/train_ssd.sh
+    3.1 ./scripts/train_ssd.sh
