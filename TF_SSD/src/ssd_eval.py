@@ -51,7 +51,7 @@ tf.app.flags.DEFINE_string(
     'eval_out_dir', './logs/SSD/eval_val', 
     """eval_out_file.""")
 
-def filter_variables(all_variables):
+def ssd_filter_variables(all_variables):
     left_variables = []
 
     filter_key = ['Momentum','iou','global_step']
@@ -69,6 +69,7 @@ def filter_variables(all_variables):
       left_variables += [v]
 
     return left_variables
+
     
 def save_detction_res(mc,image_filename,height,width,final_boxes,final_probs,final_class):
     filename = FLAGS.eval_out_dir + '/' + image_filename.split('.')[0] + '.txt'
@@ -88,7 +89,8 @@ def save_detction_res(mc,image_filename,height,width,final_boxes,final_probs,fin
           mc.CLASS_NAMES[cls], box_clip[0], box_clip[1], box_clip[2], box_clip[3],score) )
 
 def eval_all_res(mc):
-    eval = Eval(mc.CLASS_NAMES,FLAGS.labels_dir,FLAGS.eval_out_dir)
+    eval = Eval(mc.CLASS_NAMES,FLAGS.labels_dir,FLAGS.eval_out_dir,
+                        score_threshold=0.45,iou_threshold=0.45,backgroud_id=0)
     eval.evaluate_det()
     
 def eval():
@@ -103,7 +105,15 @@ def eval():
             mc.is_training = False
             model = SSDNet(mc,FLAGS.gpu)
             saver = tf.train.Saver(tf.global_variables())
-
+            
+        elif FLAGS.net == 'SSD_Mobilenet':
+            mc = vkitti_SSD_Mobilenet_config()
+            mc.BATCH_SIZE = 1
+            mc.LOAD_PRETRAINED_MODEL = False
+            mc.is_training = False
+            model = SSD_Mobilenet(mc,FLAGS.gpu)
+            saver = tf.train.Saver(tf.global_variables())
+          
         else:
             print ('No this net type!')
             return
@@ -111,11 +121,12 @@ def eval():
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
             init = tf.global_variables_initializer()
             sess.run(init)
-            gblobal_variables = filter_variables(tf.global_variables())
+            gblobal_variables = ssd_filter_variables(tf.global_variables())
             saver = tf.train.Saver(gblobal_variables)
-            
-            saver.restore(sess, FLAGS.checkpoint)
-            print ('restore:',FLAGS.checkpoint)
+
+            if mc.LOAD_PRETRAINED_MODEL == False:
+                saver.restore(sess, FLAGS.checkpoint)
+                print ('restore:',FLAGS.checkpoint)
 
             with open(FLAGS.eval_file) as f:
                 files_list = f.readlines()
@@ -170,14 +181,12 @@ def eval():
                 img_idx += 1
 
                 save_detction_res(mc,filename,src_h,src_w,final_boxes,final_probs,final_class)
-            
-            
-         
+                
             eval_all_res(mc)
             
 def main(argv=None):
-    eval()
-    #eval_all_res(vkitti_SSD_config())
+    #eval()
+    eval_all_res(vkitti_SSD_config())
     
 if __name__ == '__main__':
     tf.app.run()

@@ -42,6 +42,8 @@ class MutiBoxLossLayer():
         for i in range(0,4):
             masks.append(tf.reshape(self.input_mask,[mc.BATCH_SIZE,-1,1]))
         input_mask_box = tf.concat(masks,2)
+
+
         print ('[cal_loc_loss] loc_data:',loc_data)
         print ('[cal_loc_loss] input_mask_box:',input_mask_box)
         
@@ -121,7 +123,7 @@ class MutiBoxLossLayer():
         self.num_neg = tf.cast(self.num_pos * multibox_loss_param.neg_pos_ratio,tf.int32)
         
         print ('self.num_neg:',self.num_neg)
-        self.conf_loss = -tf.reduce_sum(gt_label*tf.log(conf_data_norm),axis=2)
+        self.conf_loss = -tf.reduce_sum(gt_label*tf.log(conf_data_norm+mc.EPSILON),axis=2)
         print ("conf_loss:",self.conf_loss)
         
         self.mine_hard_examples()

@@ -14,9 +14,9 @@ def vkitti_SSD_config():
   mc.IMAGE_WIDTH           = 300
   mc.IMAGE_HEIGHT          = 300
   mc.BGR_MEANS             = np.array([[[104,117,123]]])
-  mc.BATCH_SIZE            = 20
+  mc.BATCH_SIZE            = 16
 
-  mc.WEIGHT_DECAY          = 0.0005 #0.00001
+  mc.WEIGHT_DECAY          = 0.0001 #0.00001
   mc.LEARNING_RATE         = 0.01
   mc.DECAY_STEPS           = 20000
   mc.LR_DECAY_FACTOR       = 0.5
@@ -37,13 +37,12 @@ def vkitti_SSD_config():
   #mc.keep_top_k           = 200
   print ('vkitti_SSD_config')
 
-
   #data layer params
   mc.batch_sampler  = get_batch_sampler()
   mc.expand_param = edict()
-  mc.expand_param.prob = 1.0
+  mc.expand_param.prob = 0.5
   mc.expand_param.min_expand_ratio = 1.0
-  mc.expand_param.max_expand_ratio = 3.0
+  mc.expand_param.max_expand_ratio = 4.0
 
   #multibox_loss layer params
   mc.multibox_loss_param = edict()
@@ -70,7 +69,7 @@ def vkitti_SSD_config():
   mc.ADD_WEIGHT_DECAY_TO_LOSS = True
 
   mc.NUM_THREAD            = 4
-  mc.QUEUE_CAPACITY        = 100
+  mc.QUEUE_CAPACITY        = 256
   return mc
 
 

@@ -90,7 +90,7 @@ def save_model(sess,saver,step):
     global bstop
     checkpoint_path = os.path.join(FLAGS.restore_dir, 'model.ckpt')
     if bstop == True:
-      print ('Stop and save ',checkpoint_path)
+      print ('Stop and save ',checkpoint_path,'-',str(step))
     
     saver.save(sess, checkpoint_path, global_step=step)
     
@@ -103,17 +103,42 @@ def save_model(sess,saver,step):
     model_file = FLAGS.restore_dir + "/model.ckpt-" + str(step) + ".meta"
     shutil.copy(model_file,FLAGS.train_dir+"/../backup")
 
+
+def SSD_Mobilenet_filter_vars(all_variables):
+    left_variables = []
+
+    filter_key = ['Momentum','iou','global_step','conv14','conv15',
+        'conv16','L2Normalization','mbox_conf','mbox_loc']
+    for v in all_variables:
+      print ("name:",v.name)
+
+      isexist = False
+      for i in range(0,len(filter_key)):
+        if filter_key[i] in v.name:
+            isexist = True
+            break
+      if isexist == True:
+        continue
+        
+      left_variables += [v]
+
+    return left_variables
+
+resume = True
+
 def ssd_train():
     global bstop
+    global resume
     assert FLAGS.dataset == 'KITTI' or FLAGS.dataset == 'VKITTI', \
       'Currently only support KITTI dataset'
 
     signal.signal(signal.SIGINT, myHandler)
     
     print ('FLAGS.PRETRAINED_MODEL_PATH:',FLAGS.pretrained_model_path)
+    print ('FLAGS.checkpoint_step:',FLAGS.checkpoint_step)
     
     with tf.Graph().as_default():
-      assert  FLAGS.net == 'SSD'
+      assert  FLAGS.net == 'SSD' or FLAGS.net == 'SSD_Mobilenet'
       
       if FLAGS.net == 'SSD':
           mc = vkitti_SSD_config()
@@ -122,26 +147,51 @@ def ssd_train():
           mc.is_training = True
           model = SSDNet(mc,FLAGS.gpu)
           print ('SSD net')
-
-      data_layer = Data_layer(FLAGS.image_set, FLAGS.data_path, mc)
-      #if bresume == False:
-      #    gblobal_variables = filter_variables(tf.global_variables())
-      #    saver1 = tf.train.Saver(gblobal_variables)
-      saver = tf.train.Saver(tf.global_variables())
+          
       
+      data_layer = Data_layer(FLAGS.image_set, FLAGS.data_path, mc)
+
+      '''
+      start = time.time()
+      data_layer.Get_feed_data()
+      end = time.time()
+      print ('data_layer consume time:',end-start)
+      raw_input('=============pause')
+      '''
+
+      if FLAGS.net == 'SSD_Mobilenet':
+          if resume == False:
+              gblobal_variables = SSD_Mobilenet_filter_vars(tf.global_variables())
+              saver1 = tf.train.Saver(gblobal_variables)
+          saver = tf.train.Saver(tf.global_variables())
+      else:
+          saver = tf.train.Saver(tf.global_variables())
+
       init = tf.global_variables_initializer()
       sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
       sess.run(init)
       tf.train.start_queue_runners(sess=sess)
 
-      
       history_step = 0
       ckpt = tf.train.get_checkpoint_state(FLAGS.restore_dir)
       if ckpt and ckpt.model_checkpoint_path:
           print ("===>FLAGS.restore:",ckpt.model_checkpoint_path) 
-          ret = saver.restore(sess, ckpt.model_checkpoint_path)
-          history_step = int(ckpt.model_checkpoint_path.split('-')[-1])
-
+          if FLAGS.net == 'SSD_Mobilenet':
+              if resume == False:
+                  ret = saver1.restore(sess, ckpt.model_checkpoint_path)
+              else:
+                  ret = saver.restore(sess, ckpt.model_checkpoint_path)
+          else:
+              ret = saver.restore(sess, ckpt.model_checkpoint_path) 
+          
+          if '-' in ckpt.model_checkpoint_path:
+            history_step = int(ckpt.model_checkpoint_path.split('-')[-1])
+      
+      #for i in range(0,len(model.act)):
+      #    print ('{} shape:{}'.format(model.act_names[i],model.act[i].shape))
+              
+      #raw_input('pause')
+      
       def load_data():
         batch_image,gt_boxes_dense,gt_labels_dense,input_mask,all_match_overlaps = data_layer.Get_feed_data()
         #add queue
@@ -218,6 +268,7 @@ def ssd_train():
               continue
               
           if step % FLAGS.checkpoint_step == 0 or step == FLAGS.max_steps:
+              print ('start save')
               save_model(sess,saver,step)
 
             

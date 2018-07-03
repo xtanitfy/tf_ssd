@@ -14,7 +14,7 @@ from easydict import EasyDict as edict
 import numpy as np
 import tensorflow as tf
 #from binary_ops import * 
-from dorefa import get_dorefa
+#from dorefa import get_dorefa
 
 import tensorflow.contrib.slim as slim
 from tensorflow.python.ops import control_flow_ops
@@ -87,7 +87,7 @@ class ModelSkeleton:
   def __init__(self, mc):
     self.mc = mc
     
-    
+    '''
     # image batch input
     self.ph_image_input = tf.placeholder(
         tf.float32, [mc.BATCH_SIZE, mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],
@@ -136,6 +136,52 @@ class ModelSkeleton:
         self.box_input, self.labels = tf.train.batch(
             self.FIFOQueue.dequeue(), batch_size=mc.BATCH_SIZE,
             capacity=mc.QUEUE_CAPACITY) 
+    '''
+
+    self.ph_image_input = tf.placeholder(
+        tf.float32, [mc.BATCH_SIZE, mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],name='image_input'
+    )
+    
+    self.ph_gt_boxes_ = tf.placeholder(tf.float32, [mc.BATCH_SIZE,mc.ANCHORS_NUM,4])
+    self.ph_gt_label_ = tf.placeholder(tf.float32, [mc.BATCH_SIZE,mc.ANCHORS_NUM,len(mc.CLASS_NAMES)])
+    self.ph_input_mask_ = tf.placeholder(tf.float32, [mc.BATCH_SIZE,mc.ANCHORS_NUM])
+    self.ph_all_match_overlaps_ = tf.placeholder(tf.float32, [mc.BATCH_SIZE,mc.ANCHORS_NUM])
+
+    
+
+    #add queue config
+    '''
+    self.FIFOQueue = tf.RandomShuffleQueue(
+        capacity=mc.QUEUE_CAPACITY,
+        dtypes=[tf.float32, tf.float32, tf.float32,tf.float32,tf.float32],
+        shapes=[[mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],
+                [mc.ANCHORS_NUM,4],
+                [mc.ANCHORS_NUM,mc.CLASSES],
+                [mc.ANCHORS_NUM],
+                [mc.ANCHORS_NUM]],
+        min_after_dequeue=20
+      )
+      
+    '''
+    self.FIFOQueue = tf.FIFOQueue(
+        capacity=mc.QUEUE_CAPACITY,
+        dtypes=[tf.float32, tf.float32, tf.float32,tf.float32,tf.float32],
+        shapes=[[mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],
+                [mc.ANCHORS_NUM,4],
+                [mc.ANCHORS_NUM,mc.CLASSES],
+                [mc.ANCHORS_NUM],
+                [mc.ANCHORS_NUM]]
+      )
+     
+    
+    self.image_input,self.gt_boxes_, self.gt_label_,self.input_mask_,self.all_match_overlaps_ = tf.train.batch(
+            self.FIFOQueue.dequeue(), batch_size=mc.BATCH_SIZE,
+            capacity=mc.QUEUE_CAPACITY)
+            
+    self.enqueue_op = self.FIFOQueue.enqueue_many(
+        [self.ph_image_input,self.ph_gt_boxes_, self.ph_gt_label_,
+                self.ph_input_mask_,self.ph_all_match_overlaps_]
+    )
     
     # model parameters
     self.model_params = []
@@ -150,8 +196,8 @@ class ModelSkeleton:
     #self.is_training = tf.placeholder(tf.bool, [])
     
   def _add_act(self,act,name):
-      self.act += [act]
-      self.act_names += [name]
+      self.act.append(act)
+      self.act_names.append(name)
 
   def _add_debug(self,val,name):
     self.debug_val += [val]
@@ -581,17 +627,66 @@ class ModelSkeleton:
           mean, var = mean_var_with_update()
         else:
           mean, var = ema.average(batch_mean), ema.average(batch_var)
-        '''
-        mean, var = tf.cond(mc.is_training, mean_var_with_update,
-                            lambda: (ema.average(batch_mean), ema.average(batch_var)))
-        '''
         
         normed = tf.nn.batch_normalization(x, mean, float(var), beta, gamma, mc.BATCH_NORM_EPSILON)
         #normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, mc.BATCH_NORM_EPSILON)
     return  normed 
   
+  def _conv_pointwise_layer(self,input,layer_name,filters,use_batchnorm=True,freeze=False):
   
+    pointwise_conv = self._conv_layer(layer_name,input,filters=filters,use_bias=False,
+                size=1,stride=1,padding='SAME',freeze=freeze,kernel_name='weights')
+    if use_batchnorm == True:
+      #return self._batch_norm_layer(pointwise_conv,'BatchNorm')
+      return slim.batch_norm(pointwise_conv, scope=layer_name+'/BatchNorm')
+    else:
+      return pointwise_conv
 
+  
+  def _quant_kernel(self,mc,kernel):
+    # print ("->bQuantWeights")
+    tmp = (tf.clip_by_value(kernel, -1.0, 1.0) + 1) / float(2)
+    quant_w_val = float(2**mc.QuantWeightsBitW)
+    with tf.get_default_graph().gradient_override_map({"Round": "Identity"}):
+      kernel = 2 * tf.round(tmp * quant_w_val) / quant_w_val - 1
+    return kernel
+
+  #Using this quantize function can speed up the accuary
+  def _quant_kernel_v1(self,mc,kernel):
+    #print ("->bQuantWeights V1")
+    quant_w_val = 2**mc.QuantWeightsBitW
+    max = tf.reduce_max(tf.abs(kernel)) 
+    tmp = kernel / max
+    with tf.get_default_graph().gradient_override_map({"Round": "Identity"}):
+      kernel = tf.round(tmp * quant_w_val) * max / tf.cast(quant_w_val,'float')
+      #kernel = tf.round(tmp_normal * tf.cast(quant_w_val,'float')) * max /quant_w_val
+    return kernel
+
+  def quantize(self,x, k):
+    n = float(2**k - 1)
+    with tf.get_default_graph().gradient_override_map({"Round": "Identity"}):
+      return tf.round(x * n) / n
+            
+  def _quant_kernel_v2(self,mc,x):
+    if mc.QuantWeightsBitW == 1:   # BWN
+        with tf.get_default_graph().gradient_override_map({"Sign": "Identity"}):
+            E = tf.stop_gradient(tf.reduce_mean(tf.abs(x)))
+            return tf.sign(x / E) * E
+    x = tf.tanh(x)
+    x = x / tf.reduce_max(tf.abs(x)) * 0.5 + 0.5
+    return 2 * self.quantize(x, mc.QuantWeightsBitW) - 1
+    
+  
+  def _quant_activations(self,mc,inputs):
+    #print ("->_quant_activations")
+    quant_a_val = 2**mc.QuantActBitW
+    #max = 6.0 #because the activation functions is relu6
+    max = tf.reduce_max(inputs) 
+    tmp = inputs / max
+    with tf.get_default_graph().gradient_override_map({"Round": "Identity"}):
+      inputs = tf.round(tmp * quant_a_val)*max / tf.cast(quant_a_val,'float')
+    return inputs
+    
   def _conv_bn_layer(
       self, layer_name, inputs, filters, size, stride, padding='SAME',use_bias=False,
       freeze=False, xavier=False, relu=True, activation_fn=tf.nn.relu,stddev=0.001,
@@ -662,15 +757,6 @@ class ModelSkeleton:
         biases = _variable_on_device(bias_name, [filters], bias_init, 
                                 trainable=(not freeze))
         self.model_params += [kernel, biases]
-
-      if mc.bDoreFa == True:
-          fw, fa, fg = get_dorefa(mc.BITW,mc.BITA,mc.BITG)
-          kernel = fw(kernel)
-          if mc.BITA != 32:
-            #inputs = tf.clip_by_value(inputs, 0.0, 1.0)
-            inputs = inputs / tf.reduce_max(inputs) 
-            inputs = fa(inputs)
-            
       if mc.bQuant == True:
         if mc.bQuantWeights == True:
           kernel = self._quant_kernel_v1(mc,kernel)
@@ -707,6 +793,7 @@ class ModelSkeleton:
       self.activation_counter.append(
           (layer_name, out_shape[1]*out_shape[2]*out_shape[3])
       )
+      self._add_act(out,layer_name)
       
       return out
 
@@ -854,10 +941,6 @@ class ModelSkeleton:
           inputs = self._quant_activations(mc,inputs)
 
       if dilation > 0:
-        '''
-        conv = tf.nn.convolution(inputs,kernel,padding=padding,
-            strides=[1, stride, stride, 1],dilation_rate=dilation,name='convolution')
-        '''
         conv = tf.nn.atrous_conv2d(
             inputs, kernel,padding=padding,rate=dilation,
             name='convolution')
@@ -890,6 +973,8 @@ class ModelSkeleton:
       self.activation_counter.append(
           (layer_name, out_shape[1]*out_shape[2]*out_shape[3])
       )
+
+      self._add_act(out,layer_name)
       
       return out
   
@@ -921,6 +1006,8 @@ class ModelSkeleton:
                               
       activation_size = np.prod(out.get_shape().as_list()[1:])
       self.activation_counter.append((layer_name, activation_size))
+
+      self._add_act(out,layer_name)
       return out
 
   
@@ -1031,7 +1118,7 @@ class ModelSkeleton:
 
       return outputs
 
-  def filter_prediction(self, boxes, probs, cls_idx,backgroud_id=-1):
+  def filter_prediction(self, boxes, probs, cls_idx,backgroud_id=0):
     """Filter bounding box predictions with probability threshold and
     non-maximum supression.
 
