@@ -16,7 +16,7 @@
 
 # 4.start eval:
     4.1 cd data/VKITTI && python create_test.py
-    4.2 ./scripts/train_ssd.sh
+    4.2 ./scripts/eval_ssd.sh
     4.3 ./scripts/res_eval.sh (need spicify the train_model)
     
 # 5.will do:
