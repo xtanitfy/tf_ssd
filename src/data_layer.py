@@ -6,6 +6,7 @@ from dataset.imdb  import imdb
 from utils.util import bbox_transform,bbox_transform_inv
 from dataset import kitti
 import time
+from utils.util import batch_iou_ext
 
 class Data_layer(kitti):
     def __init__(self, image_set, data_path, mc):
@@ -384,23 +385,32 @@ class Data_layer(kitti):
         gt_boxes[:,1::2] /= height
         
         return im,gt_boxes
-          
-    def iou(self,bbox1, bbox2):
-        if bbox2[0] > bbox1[2] or bbox2[2] < bbox1[0] or bbox2[1] > bbox1[3] or bbox2[3] < bbox1[1]:
-            return 0
 
-        inter_xmin = max(bbox1[0], bbox2[0])
-        inter_ymin = max(bbox1[1], bbox2[1])
-        inter_xmax = min(bbox1[2], bbox2[2])
-        inter_ymax = min(bbox1[3], bbox2[3])
-        inter_width = inter_xmax - inter_xmin
-        inter_height = inter_ymax - inter_ymin
-        inter_size = inter_width * inter_height
 
-        bbox1_size = (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1])
-        bbox2_size = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
-        return inter_size / (bbox1_size + bbox2_size - inter_size) 
-        
+    def batch_iou(boxes, box):
+      """Compute the Intersection-Over-Union of a batch of boxes with another
+      box.
+
+      Args:
+        box1: 2D array of [cx, cy, width, height].
+        box2: a single array of [cx, cy, width, height]
+      Returns:
+        ious: array of a float number in range [0, 1].
+      """
+      lr = np.maximum(
+          np.minimum(boxes[:,0]+0.5*boxes[:,2], box[0]+0.5*box[2]) - \
+          np.maximum(boxes[:,0]-0.5*boxes[:,2], box[0]-0.5*box[2]),
+          0
+      )
+      tb = np.maximum(
+          np.minimum(boxes[:,1]+0.5*boxes[:,3], box[1]+0.5*box[3]) - \
+          np.maximum(boxes[:,1]-0.5*boxes[:,3], box[1]-0.5*box[3]),
+          0
+      )
+      inter = lr*tb
+      union = boxes[:,2]*boxes[:,3] + box[2]*box[3] - inter
+      return inter/union
+  
     def _match_bbox(self,prior_boxes,gt_boxes):
         mc = self.mc
         NUM_PRIORBOX = mc.ANCHORS_NUM
@@ -411,6 +421,7 @@ class Data_layer(kitti):
 
         start = time.time()
         for n in range(0,mc.BATCH_SIZE):
+             
             overlaps = np.zeros((NUM_PRIORBOX,len(gt_boxes[n])))
             for i in range(0,NUM_PRIORBOX):
                 for j in range(0,len(gt_boxes[n])):
@@ -419,7 +430,14 @@ class Data_layer(kitti):
                         all_match_overlaps[n][i] = max(all_match_overlaps[n][i],overlap)
                         overlaps[i][j] = overlap
                         mach_cnt += 1
-                   
+            '''
+            for j in range(0,len(gt_boxes[n])):
+              overlaps = batch_iou_ext(prior_boxes,gt_boxes[n][j])
+              for i,ov in enumerate(overlaps):
+                if ov > 1e-6: 
+                  all_match_overlaps[n][i] = max(all_match_overlaps[n][i],ov)
+            ''' 
+            
             for i in range(0,len(gt_boxes[n])):
                 max_anchor_idx = -1
                 max_gt_idx = -1
@@ -431,7 +449,7 @@ class Data_layer(kitti):
                         max_gt_idx = i
             
                 if max_overlap == 0:
-                    dists = []
+                    dists = []  
                     for j in range(0,NUM_PRIORBOX):
                         dist = np.sum(np.square(gt_boxes[n][i] - prior_boxes[j]))
                         dists.append(dist)

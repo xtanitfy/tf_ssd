@@ -412,40 +412,7 @@ def image_demo():
   with tf.Graph().as_default():
     # Load model
     
-    #mc.is_training = False
-    if FLAGS.net == 'squeezeDet':
-      print ('============squeezeDet')
-      mc = kitti_squeezeDet_config()
-      mc.BATCH_SIZE = 1
-      # model parameters will be restored from checkpoint
-      mc.LOAD_PRETRAINED_MODEL = False
-      mc.is_training = False
-      model = SqueezeDet(mc, FLAGS.gpu)
-      saver = tf.train.Saver(model.model_params)
-      
-    elif FLAGS.net == 'mobileDet':
-      print ('============mobileDet')
-      mc = kitti_mobileDet_config()
-      mc.BATCH_SIZE = 1
-      # model parameters will be restored from checkpoint
-      mc.LOAD_PRETRAINED_MODEL = False
-      mc.is_training = False
-      model = MobileDet(mc, FLAGS.gpu)
-      gblobal_variables = filter_variables(tf.global_variables())
-      saver = tf.train.Saver(gblobal_variables)
-      
-    elif FLAGS.net == 'mobileDet_V1_025':
-      print ('============mobileDet_V1_025')
-      mc = kitti_mobileDet_V1_025_config()
-      mc.BATCH_SIZE = 1
-      # model parameters will be restored from checkpoint
-      mc.LOAD_PRETRAINED_MODEL = False
-      mc.is_training = False
-      model = MobileDet(mc, FLAGS.gpu)
-      gblobal_variables = filter_variables(tf.global_variables())
-      saver = tf.train.Saver(gblobal_variables)  
-
-    elif FLAGS.net == 'SSD':
+    if FLAGS.net == 'SSD':
       mc = vkitti_SSD_config()
       mc.BATCH_SIZE = 1
       mc.LOAD_PRETRAINED_MODEL = True
@@ -503,7 +470,7 @@ def image_demo():
 
         #这里因为预测的是(xmin,ymin,xmax,ymax) 而iou函数计算的是(cx,cy,h,w)
 
-        final_boxes, final_probs, final_class = model.ssd_filter_prediction(
+        final_boxes, final_probs, final_class = model.filter_prediction(
             det_boxes[0], det_probs[0], det_class[0])
 
         keep_idx    = [idx for idx in range(len(final_probs)) \

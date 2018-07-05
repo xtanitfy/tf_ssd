@@ -9,7 +9,7 @@ import subprocess
 
 from dataset.imdb import imdb
 from utils.util import bbox_transform_inv, batch_iou
-from my_eval import Eval
+#from my_eval import Eval
 
 class kitti(imdb):
   def __init__(self, image_set, data_path, mc):

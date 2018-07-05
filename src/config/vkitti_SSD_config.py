@@ -14,11 +14,11 @@ def vkitti_SSD_config():
   mc.IMAGE_WIDTH           = 300
   mc.IMAGE_HEIGHT          = 300
   mc.BGR_MEANS             = np.array([[[104,117,123]]])
-  mc.BATCH_SIZE            = 16
+  mc.BATCH_SIZE            = 8#16
 
   mc.WEIGHT_DECAY          = 0.0001 #0.00001
   mc.LEARNING_RATE         = 0.01
-  mc.DECAY_STEPS           = 20000
+  mc.DECAY_STEPS           = 50000
   mc.LR_DECAY_FACTOR       = 0.5
   mc.MAX_GRAD_NORM         = 1.0 #1.0
   mc.MOMENTUM              = 0.9
@@ -174,17 +174,17 @@ def Anchors(mc,src_idx):
         center_x = (w + offset_) * step_w
         center_y = (h + offset_) * step_h
         box_width = box_height = min_size
-        top_data[idx][0] = (center_x - box_width / 2.) / mc.IMAGE_WIDTH
-        top_data[idx][1] = (center_y - box_height / 2.) / mc.IMAGE_HEIGHT
-        top_data[idx][2] = (center_x + box_width / 2.) / mc.IMAGE_WIDTH
-        top_data[idx][3] = (center_y + box_height / 2.) / mc.IMAGE_HEIGHT
+        top_data[idx][0] = (center_x - box_width / 2.) / float(mc.IMAGE_WIDTH)
+        top_data[idx][1] = (center_y - box_height / 2.) / float(mc.IMAGE_HEIGHT)
+        top_data[idx][2] = (center_x + box_width / 2.) / float(mc.IMAGE_WIDTH)
+        top_data[idx][3] = (center_y + box_height / 2.) / float(mc.IMAGE_HEIGHT)
         idx += 1
  
         box_width = box_height = math.sqrt(min_size * max_size)
-        top_data[idx][0] = (center_x - box_width / 2.) / mc.IMAGE_WIDTH
-        top_data[idx][1] = (center_y - box_height / 2.) / mc.IMAGE_HEIGHT
-        top_data[idx][2] = (center_x + box_width / 2.) / mc.IMAGE_WIDTH
-        top_data[idx][3] = (center_y + box_height / 2.) / mc.IMAGE_HEIGHT
+        top_data[idx][0] = (center_x - box_width / 2.) / float(mc.IMAGE_WIDTH)
+        top_data[idx][1] = (center_y - box_height / 2.) / float(mc.IMAGE_HEIGHT)
+        top_data[idx][2] = (center_x + box_width / 2.) / float(mc.IMAGE_WIDTH)
+        top_data[idx][3] = (center_y + box_height / 2.) / float(mc.IMAGE_HEIGHT)
         idx += 1
 
         for i in range(0,len(aspect_ratios)):
@@ -193,10 +193,10 @@ def Anchors(mc,src_idx):
             continue
           box_width = min_size * math.sqrt(ar)
           box_height = min_size / math.sqrt(ar)
-          top_data[idx][0] = (center_x - box_width / 2.) / mc.IMAGE_WIDTH
-          top_data[idx][1] = (center_y - box_height / 2.) / mc.IMAGE_HEIGHT
-          top_data[idx][2] = (center_x + box_width / 2.) / mc.IMAGE_WIDTH
-          top_data[idx][3] = (center_y + box_height / 2.) / mc.IMAGE_HEIGHT
+          top_data[idx][0] = (center_x - box_width / 2.) / float(mc.IMAGE_WIDTH)
+          top_data[idx][1] = (center_y - box_height / 2.) / float(mc.IMAGE_HEIGHT)
+          top_data[idx][2] = (center_x + box_width / 2.) / float(mc.IMAGE_WIDTH)
+          top_data[idx][3] = (center_y + box_height / 2.) / float(mc.IMAGE_HEIGHT)
           idx += 1
     
     return top_data

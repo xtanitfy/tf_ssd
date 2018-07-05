@@ -22,9 +22,8 @@ import numpy as np
 import tensorflow as tf
 from struct import *
 from config import *
-from train import _draw_box
+#from train import _draw_box
 from nets import *
-from my_eval import Eval
 from utils.util import clip_box
 import fileinput
 
@@ -50,6 +49,9 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string(
     'eval_out_dir', './logs/SSD/eval_val', 
     """eval_out_file.""")
+tf.app.flags.DEFINE_string('net', 'squeezeDet',
+                           """Neural net architecture. """)
+tf.app.flags.DEFINE_string('gpu', '0', """gpu id.""")
 
 def ssd_filter_variables(all_variables):
     left_variables = []
@@ -70,28 +72,26 @@ def ssd_filter_variables(all_variables):
 
     return left_variables
 
-    
-def save_detction_res(mc,image_filename,height,width,final_boxes,final_probs,final_class):
-    filename = FLAGS.eval_out_dir + '/' + image_filename.split('.')[0] + '.txt'
-    if len(final_class) == 0:
-        with open(filename, 'wt') as f:
-          f.write(
-          '{:s} -1 -1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0\n'.format(mc.CLASS_NAMES[0]))
-          
-    with open(filename, 'wt') as f:
-      for cls_idx, cls in enumerate(final_class):
-          box = final_boxes[cls_idx]
-          box_clip = clip_box(box,height,width)
-          score = final_probs[cls_idx]
-          f.write(
-          '{:s} -1 -1 0.0 {:.2f} {:.2f} {:.2f} {:.2f} 0.0 0.0 0.0 0.0 0.0 '
-          '0.0 0.0 {:.3f}\n'.format(
-          mc.CLASS_NAMES[cls], box_clip[0], box_clip[1], box_clip[2], box_clip[3],score) )
+def save_eval_res(mc,image_filename,height,width,final_boxes,final_probs,final_class):
+    clases = mc.CLASS_NAMES
 
-def eval_all_res(mc):
-    eval = Eval(mc.CLASS_NAMES,FLAGS.labels_dir,FLAGS.eval_out_dir,
-                        score_threshold=0.45,iou_threshold=0.45,backgroud_id=0)
-    eval.evaluate_det()
+    for i,box in enumerate(final_boxes):
+      box_clip = clip_box(box,height,width)
+      score = final_probs[i]
+      cls = final_class[i]
+      if cls == 0:
+        continue
+
+      #print ('cls:',cls)
+      cls_filename = os.path.join(FLAGS.eval_out_dir,'results_{}.txt'.format(cls))
+      
+      filename = image_filename.split('.')[0]
+      with open(cls_filename,'a+') as f:
+        f.write('{} {} {} {} {} {}\n'.format(filename,score,
+                  box_clip[0],box_clip[1],box_clip[2],box_clip[3]))
+        
+      #raw_input('pause')
+
     
 def eval():
     """Detect image."""
@@ -161,7 +161,7 @@ def eval():
                 det_class = np.argmax(probs,2)
                 
                 # Filter
-                final_boxes, final_probs, final_class = model.ssd_filter_prediction(
+                final_boxes, final_probs, final_class = model.filter_prediction(
                                             det_boxes[0], det_probs[0], det_class[0])
 
                 final_boxes_arr = np.array(final_boxes)
@@ -169,7 +169,9 @@ def eval():
                 scale_height = float(src_h) / float(orig_h)
                 final_boxes_arr[:,0::2] *=  scale_width
                 final_boxes_arr[:,1::2] *=  scale_height
-
+                    
+                save_eval_res(mc,filename,src_h,src_w,final_boxes_arr,final_probs,final_class)
+                
                 keep_idx    = [idx for idx in range(len(final_probs)) \
                                             if final_probs[idx] > mc.PLOT_PROB_THRESH]
                 final_boxes = [final_boxes_arr[idx] for idx in keep_idx]
@@ -179,14 +181,9 @@ def eval():
                 
                 print ('image name:{} {}/{}'.format(filename,img_idx,all_num))
                 img_idx += 1
-
-                save_detction_res(mc,filename,src_h,src_w,final_boxes,final_probs,final_class)
-                
-            eval_all_res(mc)
             
 def main(argv=None):
-    #eval()
-    eval_all_res(vkitti_SSD_config())
+    eval()
     
 if __name__ == '__main__':
     tf.app.run()

@@ -1,12 +1,12 @@
 #!/bin/bash
 
 
-python ./src/eval.py \
+python ./src/ssd_eval.py \
   --dataset=VKITTI \
   --data_path=./data/VKITTI \
   --image_set=val \
   --eval_dir=./logs/SSD/eval_val \
-  --checkpoint_path=$2 \
-  --net=$1 \
+  --checkpoint=logs/SSD/model_save/model.ckpt-6527 \
+  --net=SSD \
   --gpu=0
 

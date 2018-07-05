@@ -632,16 +632,6 @@ class ModelSkeleton:
         #normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, mc.BATCH_NORM_EPSILON)
     return  normed 
   
-  def _conv_pointwise_layer(self,input,layer_name,filters,use_batchnorm=True,freeze=False):
-  
-    pointwise_conv = self._conv_layer(layer_name,input,filters=filters,use_bias=False,
-                size=1,stride=1,padding='SAME',freeze=freeze,kernel_name='weights')
-    if use_batchnorm == True:
-      #return self._batch_norm_layer(pointwise_conv,'BatchNorm')
-      return slim.batch_norm(pointwise_conv, scope=layer_name+'/BatchNorm')
-    else:
-      return pointwise_conv
-
   
   def _quant_kernel(self,mc,kernel):
     # print ("->bQuantWeights")

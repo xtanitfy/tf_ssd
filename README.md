@@ -13,3 +13,12 @@
     
 # 3.start train:
     3.1 ./scripts/train_ssd.sh
+
+# 4.start eval:
+    4.1 cd data/VKITTI && python create_test.py
+    4.2 ./scripts/train_ssd.sh
+    4.3 ./scripts/res_eval.sh (need spicify the train_model)
+    
+# 5.will do:
+    5.1 trian too slow:
+        Rewrite the function _match_bbox and _sparse_to_dense from data_layer.py by using c.

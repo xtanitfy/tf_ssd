@@ -101,13 +101,11 @@ class MutiBoxLossLayer():
             filter_neg = tf.where(tf.logical_and(tf.equal(self.input_mask[i],0),
                                                   tf.less(self.all_match_overlaps[i],multibox_loss_param.neg_overlap)),
                                                 self.conf_loss[i],tf.zeros_like(self.conf_loss[i]))
-            #print ('filter_neg:',filter_neg)
-            
             neg_loss,neg_idx = tf.nn.top_k(filter_neg, k=self.num_neg[i], sorted=True)
             self.batch_neg_loss.append(neg_loss)
             self.batch_neg_idx.append(neg_idx)
         
-    def process(self,loc_data,conf_data,gt_boxes,gt_label,input_mask,all_match_overlaps):
+    def process(self,loc_data,conf_data,mbox_pred,gt_boxes,gt_label,input_mask,all_match_overlaps):
         mc = self.mc
         
         multibox_loss_param = mc.multibox_loss_param
@@ -123,7 +121,10 @@ class MutiBoxLossLayer():
         self.num_neg = tf.cast(self.num_pos * multibox_loss_param.neg_pos_ratio,tf.int32)
         
         print ('self.num_neg:',self.num_neg)
-        self.conf_loss = -tf.reduce_sum(gt_label*tf.log(conf_data_norm+mc.EPSILON),axis=2)
+        #self.conf_loss = -tf.reduce_sum(gt_label*tf.log(conf_data_norm+mc.EPSILON),axis=2)
+        self.conf_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=tf.reshape(mbox_pred,[mc.BATCH_SIZE, mc.ANCHORS_NUM,mc.CLASSES]), labels=tf.argmax(gt_label,2))
+            
         print ("conf_loss:",self.conf_loss)
         
         self.mine_hard_examples()

@@ -274,6 +274,7 @@ class SSDNet(ModelSkeleton):
         
   def add_interpretation_graph(self):
     mc = self.mc
+    self.mbox_pred = self.mbox_conf
     self.mbox_conf = tf.reshape(
                         tf.nn.softmax(
                             tf.reshape(self.mbox_conf,
@@ -297,9 +298,6 @@ class SSDNet(ModelSkeleton):
     class_num = len(mc.CLASS_NAMES)
     
     self.mbox_conf = tf.reshape(self.mbox_conf,[mc.BATCH_SIZE,-1,class_num])
-
-    
-    
     self.finnal_mbox_conf = tf.reduce_max(self.mbox_conf, 2, name='score')
     self.det_class_idx = tf.argmax(self.mbox_conf, 2, name='class_idx')
     
@@ -315,7 +313,7 @@ class SSDNet(ModelSkeleton):
     print ('self.mbox_conf')
     mc = self.mc
     self.mbox_loc_reshape = tf.reshape(self.mbox_loc,[mc.BATCH_SIZE,-1,4])
-    self.mutibox_loss_layer.process(self.mbox_loc_reshape,self.mbox_conf,
+    self.mutibox_loss_layer.process(self.mbox_loc_reshape,self.mbox_conf,self.mbox_pred,
                                         self.gt_boxes_,self.gt_label_,
                                           self.input_mask_,self.all_match_overlaps_)
     tf.add_to_collection('losses', self.mutibox_loss_layer.loss)
