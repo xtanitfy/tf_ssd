@@ -14,14 +14,15 @@ def vkitti_SSD_config():
   mc.IMAGE_WIDTH           = 300
   mc.IMAGE_HEIGHT          = 300
   mc.BGR_MEANS             = np.array([[[104,117,123]]])
-  mc.BATCH_SIZE            = 8#16
+  mc.BATCH_SIZE            = 16
 
   mc.WEIGHT_DECAY          = 0.0001 #0.00001
-  mc.LEARNING_RATE         = 0.01
-  mc.DECAY_STEPS           = 50000
+  mc.LEARNING_RATE         = 0.001
+  mc.DECAY_STEPS           = 30000
   mc.LR_DECAY_FACTOR       = 0.5
   mc.MAX_GRAD_NORM         = 1.0 #1.0
   mc.MOMENTUM              = 0.9
+  mc.CLIP_GRAD             = False
   
   mc.mbox_source_layers_name = ['conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
   mc.normalizations = [20, -1, -1, -1, -1, -1]
@@ -69,7 +70,8 @@ def vkitti_SSD_config():
   mc.ADD_WEIGHT_DECAY_TO_LOSS = True
 
   mc.NUM_THREAD            = 4
-  mc.QUEUE_CAPACITY        = 256
+  mc.QUEUE_CAPACITY        = 128
+
   return mc
 
 

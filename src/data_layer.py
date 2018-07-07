@@ -7,6 +7,10 @@ from utils.util import bbox_transform,bbox_transform_inv
 from dataset import kitti
 import time
 from utils.util import batch_iou_ext
+from numba import jit
+import numba as nb
+from common import *
+import speed_up
 
 class Data_layer(kitti):
     def __init__(self, image_set, data_path, mc):
@@ -301,31 +305,22 @@ class Data_layer(kitti):
           num = len(gt_bbox)
           
           for j in range(0,num):
-            gt_data.append([i,gt_label[j],0,gt_bbox[j][0],gt_bbox[j][1],gt_bbox[j][2],gt_bbox[j][3]])
-          
+            #gt_data.append([i,gt_label[j],0,gt_bbox[j][0],gt_bbox[j][1],gt_bbox[j][2],gt_bbox[j][3]])
+            gt_data.append([float(i),float(gt_label[j]), float(0),
+                  float(gt_bbox[j][0]),float(gt_bbox[j][1]),float(gt_bbox[j][2]),float(gt_bbox[j][3])])            
           #batch_ids = np.ones((num ,1))*i
           #instance_ids = np.ones((num ,1))
           #gt_data.append(np.concatenate([batch_ids,gt_label,instance_ids,gt_bbox],axis=1))
           #print ('4---------------------------------')
-          
-        #print ('[Get_feed_data] 11111')
+
         gt_boxes,gt_labels = self.parse_gt_data(gt_data)
 
-        #print ('[Get_feed_data] 1')
-        #print ('[Get_feed_data] 22222')
         all_match_indices,all_match_overlaps = self._match_bbox(mc.ANCHOR_BOX,gt_boxes)
         assert len(all_match_indices) != 0 
         
         gt_boxes_dense,gt_labels_dense,input_mask = self._sparse_to_dense(gt_boxes,gt_labels,all_match_indices)
         assert len(gt_bbox) != 0 
 
-        #print ('all_match_indices.shape:',all_match_indices.shape)
-        #print ('all_match_overlaps.shape:',all_match_overlaps.shape)
-        #print ('gt_boxes_dense.shape:',gt_boxes_dense.shape)
-        #print ('input_mask.shape:',input_mask.shape)
-            
-        
-        #print ('[Get_feed_data] end')
         return input_images,gt_boxes_dense,gt_labels_dense,input_mask,all_match_overlaps
              
     def draw_annno(self,image,gt_boxes,filename):
@@ -410,16 +405,38 @@ class Data_layer(kitti):
       inter = lr*tb
       union = boxes[:,2]*boxes[:,3] + box[2]*box[3] - inter
       return inter/union
-  
-    def _match_bbox(self,prior_boxes,gt_boxes):
+
+        
+    def _match_bbox(self,prior_boxes,gt_boxes):   
+        start = time.time()        
         mc = self.mc
+        NUM_PRIORBOX = mc.ANCHORS_NUM
+        BATCH_SIZE = mc.BATCH_SIZE
+        overlap_threshold = mc.overlap_threshold
+
+        all_match_indices = np.zeros((BATCH_SIZE,NUM_PRIORBOX)) - 1
+        all_match_overlaps = np.zeros((BATCH_SIZE,NUM_PRIORBOX))
+
+        all_match_indices = np.reshape(all_match_indices,[-1]).tolist()
+        all_match_overlaps = np.reshape(all_match_overlaps,[-1]).tolist()
+        speed_up.macth_boxes(gt_boxes,np.reshape(prior_boxes,[-1]).tolist(),
+                              all_match_indices,
+                              all_match_overlaps,
+                              BATCH_SIZE,NUM_PRIORBOX,overlap_threshold)                             
+        all_match_indices = np.reshape(np.array(all_match_indices),[BATCH_SIZE,NUM_PRIORBOX])
+        all_match_overlaps = np.reshape(np.array(all_match_overlaps),[BATCH_SIZE,NUM_PRIORBOX])
+        end = time.time()
+        
+        return all_match_indices,all_match_overlaps
+
+        '''
         NUM_PRIORBOX = mc.ANCHORS_NUM
         
         all_match_indices = np.zeros((mc.BATCH_SIZE,NUM_PRIORBOX)) - 1
         all_match_overlaps = np.zeros((mc.BATCH_SIZE,NUM_PRIORBOX))
         mach_cnt = 0
 
-        start = time.time()
+        #start = time.time()
         for n in range(0,mc.BATCH_SIZE):
              
             overlaps = np.zeros((NUM_PRIORBOX,len(gt_boxes[n])))
@@ -430,14 +447,11 @@ class Data_layer(kitti):
                         all_match_overlaps[n][i] = max(all_match_overlaps[n][i],overlap)
                         overlaps[i][j] = overlap
                         mach_cnt += 1
-            '''
-            for j in range(0,len(gt_boxes[n])):
-              overlaps = batch_iou_ext(prior_boxes,gt_boxes[n][j])
-              for i,ov in enumerate(overlaps):
-                if ov > 1e-6: 
-                  all_match_overlaps[n][i] = max(all_match_overlaps[n][i],ov)
-            ''' 
-            
+
+            max_anchor_idx = -1
+            max_gt_idx = -1
+            max_overlap = 0
+                
             for i in range(0,len(gt_boxes[n])):
                 max_anchor_idx = -1
                 max_gt_idx = -1
@@ -453,14 +467,14 @@ class Data_layer(kitti):
                     for j in range(0,NUM_PRIORBOX):
                         dist = np.sum(np.square(gt_boxes[n][i] - prior_boxes[j]))
                         dists.append(dist)
-                        idx = np.argsort(np.array(dists))[0] 
-                        max_anchor_idx = idx
-                        max_overlap = overlaps[idx][i]
-                        max_gt_idx = i
+                    idx = np.argsort(np.array(dists))[0] 
+                    max_anchor_idx = idx
+                    max_overlap = overlaps[idx][i]
+                    max_gt_idx = i
                   
             all_match_overlaps[n][max_anchor_idx] =  max_overlap
             all_match_indices[n][max_anchor_idx] = max_gt_idx
-          
+            
             for i in range(0,NUM_PRIORBOX): 
                 max_overlap = 0
                 max_gt_idx = -1
@@ -475,11 +489,13 @@ class Data_layer(kitti):
                 if  max_gt_idx != -1:    
                     all_match_overlaps[n][i] = max_overlap
                     all_match_indices[n][i] = max_gt_idx
-        end = time.time()
+        #end = time.time()
         #print ('_match_bbox time:',end-start)
         
-        return all_match_indices,all_match_overlaps    
-        
+        return all_match_indices,all_match_overlaps 
+        '''
+    #(nopython=True)  
+    @jit  
     def _sparse_to_dense(self,gt_boxes,gt_labels,all_match_indices):
         mc = self.mc
         NUM_PRIORBOX = mc.ANCHORS_NUM
@@ -505,9 +521,6 @@ class Data_layer(kitti):
                     one_box = gt_boxes[n][gt_idx]
                 gt_labels_dense[n][i] = one_label
                 gt_boxes_dense[n][i] = one_box
-
-                
-                  #print ('{} pos_num:{}'.format(n,cnt))
 
         #raw_input('pause')
         end = time.time()

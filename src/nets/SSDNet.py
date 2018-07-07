@@ -21,6 +21,7 @@ from mutibox_loss_layer import MutiBoxLossLayer
 class SSDNet(ModelSkeleton):
   def __init__(self, mc, gpu_id=0):
     with tf.device('/gpu:{}'.format(gpu_id)):
+    #with tf.device('/cpu:{}'.format(0)):
       print ('SSDNet __init__')
       ModelSkeleton.__init__(self, mc)
       self.mutibox_loss_layer = MutiBoxLossLayer(mc)
@@ -338,8 +339,10 @@ class SSDNet(ModelSkeleton):
       with tf.variable_scope('clip_gradient') as scope:
         for i, (grad, var) in enumerate(grads_vars):
           #print ("2--var.name:",var.op.name)
-          grads_vars[i] = (tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
-      
+          if mc.CLIP_GRAD == True:
+            grads_vars[i] = (tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
+          else:
+            pass
       
       apply_gradient_op = optimizer.apply_gradients(grads_vars,global_step=self.global_step)
       with tf.control_dependencies([apply_gradient_op]):

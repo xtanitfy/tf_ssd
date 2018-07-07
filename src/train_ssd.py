@@ -151,14 +151,14 @@ def ssd_train():
       
       data_layer = Data_layer(FLAGS.image_set, FLAGS.data_path, mc)
 
-      '''
+      
       start = time.time()
       data_layer.Get_feed_data()
       end = time.time()
       print ('data_layer consume time:',end-start)
       raw_input('=============pause')
-      '''
-
+      
+      
       if FLAGS.net == 'SSD_Mobilenet':
           if resume == False:
               gblobal_variables = SSD_Mobilenet_filter_vars(tf.global_variables())
@@ -254,7 +254,7 @@ def ssd_train():
           if step % 10 == 0:
               num_images_per_step = mc.BATCH_SIZE
               images_per_sec = num_images_per_step / duration
-              sec_per_batch = float(duration)
+              sec_per_batch = float(duration) / float(num_images_per_step)
               print ('%s: step %d, loss=%.6f loc_loss=%.6f conf_loss=%.6f lr=%.6f %.3f sec/batch)' % (
                                       datetime.now(),
                                       step,

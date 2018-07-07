@@ -57,7 +57,8 @@ class MutiBoxLossLayer():
     
     def cal_conf_loss_v1(self):
         mc = self.mc
-        self.pos_loss = tf.reduce_sum(tf.where(tf.equal(self.input_mask,1),self.conf_loss,tf.zeros_like(self.conf_loss)))  
+        self.pos_loss = tf.reduce_sum(tf.where(tf.equal(self.input_mask,1),
+                                      self.conf_loss,tf.zeros_like(self.conf_loss)))  
         
         neg_losses = []
         for i in range(0,mc.BATCH_SIZE):
