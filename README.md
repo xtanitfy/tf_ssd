@@ -23,6 +23,6 @@
     5.1 Improve accuracy
     
 # 6.Reference:
-    6.1 [caffe-ssd](https://github.com/weiliu89/caffe/tree/ssd)
-    6.2 [squeezeDet](https://github.com/BichenWuUCB/squeezeDet)
+    6.1 ![caffe-ssd](https://github.com/weiliu89/caffe/tree/ssd)
+    6.2 ![squeezeDet](https://github.com/BichenWuUCB/squeezeDet)
         .
