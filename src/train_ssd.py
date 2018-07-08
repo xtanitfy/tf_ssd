@@ -151,13 +151,13 @@ def ssd_train():
       
       data_layer = Data_layer(FLAGS.image_set, FLAGS.data_path, mc)
 
-      
+      '''
       start = time.time()
       data_layer.Get_feed_data()
       end = time.time()
       print ('data_layer consume time:',end-start)
       raw_input('=============pause')
-      
+      '''
       
       if FLAGS.net == 'SSD_Mobilenet':
           if resume == False:

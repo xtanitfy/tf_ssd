@@ -218,13 +218,13 @@ def get_batch_sampler():
     batch_sampler = [
         {
             'max_sample':1,
-            'max_trials':1,
-            'min_scale':1,
-            'max_scale':1,
-            'min_aspect_ratio':1,
-            'max_aspect_ratio':1,
-            'min_jaccard_overlap':0,
-            'max_jaccard_overlap':1,
+            'max_trials':100,
+            'min_scale':1.,
+            'max_scale':1.,
+            'min_aspect_ratio':1.,
+            'max_aspect_ratio':1.,
+            'min_jaccard_overlap':0.,
+            'max_jaccard_overlap':1.,
         },
         {
             'max_trials': 1,

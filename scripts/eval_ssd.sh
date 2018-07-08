@@ -6,7 +6,7 @@ python ./src/ssd_eval.py \
   --data_path=./data/VKITTI \
   --image_set=val \
   --eval_dir=./logs/SSD/eval_val \
-  --checkpoint=logs/SSD/model_save/model.ckpt-53548 \
+  --checkpoint=logs/SSD/model_save/model.ckpt-85295 \
   --net=SSD \
   --gpu=0
 

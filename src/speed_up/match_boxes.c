@@ -45,7 +45,6 @@ int do_match(BATCH_BOXES_t *pBatchGtBoxes,float *prior_boxes,
         }
     }
     
-    
     float (*pPriorboxes)[4] = (float (*)[4])prior_boxes;
     for (int n = 0;n < batch_size;n++) {
         int img_gt_num = pBatchGtBoxes->pBoxes[n].len;
@@ -157,14 +156,3 @@ static float iou(float *bbox1, float *bbox2)
 }
 
     
-
-    
-    
-
-   
-    
-    
-    
-    
-    
-     

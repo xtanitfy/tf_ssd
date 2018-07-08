@@ -30,11 +30,39 @@ def io_save_array_to_bin_file(filename,data):
     for i in range(0,act_flat.shape[0]):
         file.write(pack("f",float(act_flat[i])))
     file.close()
+
+
+def io_save_list2_to_txt_file(filename,data):
+    a = []
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+          a.append(data[i][j])
+    
+    io_save_array_to_txt_file(filename,np.array(a))
+    
+def io_save_list2_to_bin_file(filename,data):
+    a = []
+    for i in range(len(data)):
+        print (str(len(data[i]))+' ')
+        for j in range(len(data[i])):
+          a.append(data[i][j])
+    
+    io_save_array_to_bin_file(filename,np.array(a))
+ 
+def io_save_list3_to_txt_file(filename,data):
+    a = []
+    for i in range(len(data)):
+        print (str(len(data[i]))+' ')
+        for j in range(len(data[i])):
+            for k in range(len(data[i][j])):
+                a.append(data[i][j][k])
+    
+    io_save_array_to_txt_file(filename,np.array(a))
     
 def io_save_list3_to_bin_file(filename,data):
     a = []
     for i in range(len(data)):
-        print (str(len(data[i]))+' ')
+        #print (str(len(data[i]))+' ')
         for j in range(len(data[i])):
             for k in range(len(data[i][j])):
                 a.append(data[i][j][k])
@@ -54,7 +82,7 @@ def io_save_list3_to_txt_file(filename,data):
     
 def io_read_from_bin_file(dir,filename,size):
     arr = np.zeros((int(size)),dtype='float32')
-    filefullname = os.path.jopin(dir,filename)
+    filefullname = os.path.join(dir,filename)
 
     is_exist = os.path.isfile(filefullname)
     assert is_exist == True

@@ -315,6 +315,7 @@ class Data_layer(kitti):
 
         gt_boxes,gt_labels = self.parse_gt_data(gt_data)
 
+
         all_match_indices,all_match_overlaps = self._match_bbox(mc.ANCHOR_BOX,gt_boxes)
         assert len(all_match_indices) != 0 
         
@@ -502,7 +503,20 @@ class Data_layer(kitti):
         gt_boxes_dense = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX,4])
         gt_labels_dense = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX,mc.CLASSES])
         input_mask = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX])
+        #############################\
+        gt_boxes_dense = np.reshape(gt_boxes_dense,[-1]).tolist()
+        gt_labels_dense = np.reshape(gt_labels_dense,[-1]).tolist()
+        input_mask = np.reshape(input_mask,[-1]).tolist()
+        all_match_indices = np.reshape(all_match_indices,[-1]).tolist()
+        speed_up.sparse_to_dense(gt_boxes,gt_labels,all_match_indices,
+                    gt_boxes_dense,gt_labels_dense,input_mask,
+                    mc.BATCH_SIZE,NUM_PRIORBOX,mc.CLASSES,mc.background_label_id)
 
+        gt_boxes_dense = np.reshape(np.array(gt_boxes_dense),[mc.BATCH_SIZE, NUM_PRIORBOX,4])
+        gt_labels_dense = np.reshape(np.array(gt_labels_dense),[mc.BATCH_SIZE, NUM_PRIORBOX,mc.CLASSES])
+        input_mask = np.reshape(np.array(input_mask),[mc.BATCH_SIZE, NUM_PRIORBOX])
+        ###############################
+        '''
         start = time.time()
         for n in range(0,mc.BATCH_SIZE):
             cnt = 0
@@ -525,6 +539,25 @@ class Data_layer(kitti):
         #raw_input('pause')
         end = time.time()
         #print ('_sparse_to_dense time:',end-start)
+        
+        io_save_list3_to_bin_file("out/gt_boxes.bin",gt_boxes)
+        io_save_list3_to_txt_file("out/gt_boxes.txt",gt_boxes)
+
+        io_save_list2_to_bin_file("out/gt_labels.bin",gt_labels)
+        io_save_list2_to_txt_file("out/gt_labels.txt",gt_labels)
+
+        io_save_array_to_bin_file("out/all_match_indices.bin",all_match_indices)
+        io_save_array_to_txt_file("out/all_match_indices.txt",all_match_indices)
+        
+        io_save_array_to_bin_file("out/gt_boxes_dense.bin",gt_boxes_dense)
+        io_save_array_to_txt_file("out/gt_boxes_dense.txt",gt_boxes_dense)
+        
+        io_save_array_to_bin_file("out/gt_labels_dense.bin",gt_labels_dense)
+        io_save_array_to_txt_file("out/gt_labels_dense.txt",gt_labels_dense)
+        
+        io_save_array_to_bin_file("out/input_mask.bin",input_mask)
+        io_save_array_to_txt_file("out/input_mask.txt",input_mask)
+        '''
         
         return gt_boxes_dense,gt_labels_dense,input_mask 
         
