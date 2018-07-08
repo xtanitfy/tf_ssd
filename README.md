@@ -20,5 +20,9 @@
     4.3 ./scripts/res_eval.sh (need spicify the train_model)
     
 # 5.will do:
-    5.1 trian too slow:
-        Rewrite the function _match_bbox and _sparse_to_dense from data_layer.py by using c.
+    5.1 Improve accuracy
+    
+# 6.Reference:
+    6.1 https://github.com/weiliu89/caffe/tree/ssd
+    6.2 https://github.com/BichenWuUCB/squeezeDet
+        .
