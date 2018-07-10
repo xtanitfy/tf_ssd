@@ -11,6 +11,7 @@ from numba import jit
 import numba as nb
 from common import *
 import speed_up
+import random
 
 class Data_layer(kitti):
     def __init__(self, image_set, data_path, mc):
@@ -20,7 +21,27 @@ class Data_layer(kitti):
         
     def run_transform(self,image,gt_boxes):
         pass
-          
+
+
+    def MeetEmitConstraint_one(self,sample_box,anno_box):
+
+        xmin,ymin,xmax,ymax = anno_box
+        xmin = min(max(xmin,0.),1.)
+        ymin = min(max(ymin,0.),1.)
+        xmax = min(max(xmax,0.),1.)
+        ymax = min(max(ymax,0.),1.)
+              
+        x_center = (xmin + xmax) / 2.
+        y_center = (ymin + ymax) / 2.
+              
+        clip_xmin,clip_ymin,clip_xmax,clip_ymax = sample_box
+        if x_center > clip_xmin and x_center < clip_xmax \
+            and y_center > clip_ymin and y_center < clip_ymax:
+          return True
+        else:
+          return False  
+
+        
     def MeetEmitConstraint(self,clip_box,anno_boxes):
         anno_box_filter_idx = []
         for i,anno_box in enumerate(anno_boxes):
@@ -56,9 +77,10 @@ class Data_layer(kitti):
         mc  = self.mc
         batch_sampler = mc.batch_sampler
         sample_boxs = []
-        
+
         image_bak = image
         gt_boxes_bak = gt_boxes 
+        
         for i in range(1,len(batch_sampler)):
             sampler = batch_sampler[i]
             found = 0
@@ -66,35 +88,35 @@ class Data_layer(kitti):
             for cnt in range(0,sampler['max_trials']):
                 if found >=  max_sample:
                     break
-                scale = self.random_float(sampler['min_scale'],sampler['max_scale'])
-                aspect_ratio = self.random_float(sampler['min_aspect_ratio'],sampler['max_aspect_ratio'])
+                scale = random.uniform(sampler['min_scale'],sampler['max_scale'])
+                aspect_ratio = random.uniform(sampler['min_aspect_ratio'],sampler['max_aspect_ratio'])
                 aspect_ratio = max(aspect_ratio,math.pow(scale,2))
                 aspect_ratio = min(aspect_ratio,1./math.pow(scale,2))
                 bbox_width = scale * math.sqrt(aspect_ratio)
                 bbox_height = scale / math.sqrt(aspect_ratio)
                 
-                w_off = self.random_float(0.,1-bbox_width)
-                h_off = self.random_float(0.,1-bbox_height)
+                w_off = random.uniform(0.,1-bbox_width)
+                h_off = random.uniform(0.,1-bbox_height)
+                
                 sample_box = [w_off,h_off,w_off+bbox_width,h_off+bbox_height]
                 
                 min_jaccard_overlap = sampler['min_jaccard_overlap']
                 max_jaccard_overlap = sampler['max_jaccard_overlap']
                 
-                for gt_box in gt_boxes:
+                is_exist = False
+                for gt_idx,gt_box in enumerate(gt_boxes):
                     iou_val = self.iou(sample_box,gt_box)
-                    if iou_val >= min_jaccard_overlap or iou_val <= max_jaccard_overlap: 
-                        found += 1
-                        sample_boxs.append(sample_box)
-        
-        rng_id = np.random.randint(1000000) % len(sample_boxs) 
+                    if iou_val >= min_jaccard_overlap and \
+                          iou_val <= max_jaccard_overlap:   
+                      is_exist = True
+                      break      
+                if is_exist == True:
+                    found += 1
+                    sample_boxs.append(sample_box)
+
+        rng_id = np.random.randint(0,len(sample_boxs)) 
         sample_box = sample_boxs[rng_id]
-
-        
         anno_box_filter_idx = self.MeetEmitConstraint(sample_box,gt_boxes)
-
-        #print ('len(self.anno_box_filter_idx):',len(anno_box_filter_idx))
-        #print ('len(gt_boxes):',len(gt_boxes))
-        
         gt_boxes = np.array([gt_boxes[i] for i in anno_box_filter_idx])
         if len(gt_boxes) == 0:
             anno_box_filter_idx = [i for i in range(len(gt_boxes_bak))]
@@ -140,15 +162,6 @@ class Data_layer(kitti):
         bbox2_size = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
         return inter_size / (bbox1_size + bbox2_size - inter_size)
           
-    def random_float(self,min,max):
-        DIV_INT = 1000000
-        min_n = int(min*DIV_INT)
-        max_n = int(max*DIV_INT) 
-        if min_n >= max_n:
-          return min_n/float(DIV_INT)
-            
-        return np.random.randint(min_n,max_n)/1000000.
-
     def expand(self,image,gt_boxes):
         mc = self.mc
         b_expand = np.random.rand()
@@ -160,14 +173,14 @@ class Data_layer(kitti):
         gt_boxes[:,0::2] *= ori_width
         gt_boxes[:,1::2] *= ori_height
         
-        expand_ratio = np.random.randint(mc.expand_param.min_expand_ratio,mc.expand_param.max_expand_ratio)
+        expand_ratio = random.uniform(mc.expand_param.min_expand_ratio,mc.expand_param.max_expand_ratio)
 
         height = int(ori_height * expand_ratio)
         width  = int(ori_width * expand_ratio)
         
         if height != ori_height:
-            h_off = self.random_float(0,height - ori_height)
-            w_off = self.random_float(0,width - ori_width)
+            h_off = random.uniform(0,height - ori_height)
+            w_off = random.uniform(0,width - ori_width)
             h_off = int(np.floor(h_off))
             w_off = int(np.floor(w_off))
         else:
@@ -183,7 +196,6 @@ class Data_layer(kitti):
         gt_boxes[:,0::2] /= width
         gt_boxes[:,1::2] /= height
         
-        #print ('exapnd gt_boxes:',gt_boxes)
         return image_expand,gt_boxes
         
     def Preprocess(self,image,gt_boxes):
@@ -202,7 +214,10 @@ class Data_layer(kitti):
           
           image,gt_boxes,anno_box_filter_idx = self.run_sampler(image,gt_boxes)
 
+          ############debug 
           gt_boxes = self.clip_boxes(gt_boxes)
+
+          
         #self.draw_annno(image,gt_boxes,'out/run_sampler.jpg')
         
         #image,gt_boxes = self.drift(image,gt_boxes)
@@ -293,10 +308,10 @@ class Data_layer(kitti):
           filename = 'logs/' + str(i) + '.jpg'
           self.draw_annno(im,gt_bbox,filename)
           print ('---------save :',filename)
-          cv2.waitKey(20)
-          
-          raw_input('pasue')
+          #cv2.waitKey(20)
           '''
+          #raw_input('pasue')
+   
           
           # scale image
           #image_anno = im + mc.BGR_MEANS
@@ -495,15 +510,14 @@ class Data_layer(kitti):
         
         return all_match_indices,all_match_overlaps 
         '''
-    #(nopython=True)  
-    @jit  
+        
     def _sparse_to_dense(self,gt_boxes,gt_labels,all_match_indices):
         mc = self.mc
         NUM_PRIORBOX = mc.ANCHORS_NUM
         gt_boxes_dense = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX,4])
         gt_labels_dense = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX,mc.CLASSES])
         input_mask = np.zeros([mc.BATCH_SIZE, NUM_PRIORBOX])
-        #############################\
+        #############################
         gt_boxes_dense = np.reshape(gt_boxes_dense,[-1]).tolist()
         gt_labels_dense = np.reshape(gt_labels_dense,[-1]).tolist()
         input_mask = np.reshape(input_mask,[-1]).tolist()

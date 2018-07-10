@@ -13,13 +13,28 @@ def vkitti_SSD_config():
   mc.VERSION               = 'V1'
   mc.IMAGE_WIDTH           = 300
   mc.IMAGE_HEIGHT          = 300
-  mc.BGR_MEANS             = np.array([[[104,117,123]]])
-  mc.BATCH_SIZE            = 16
+  mc.BGR_MEANS             = np.array([[[104.,117.,123.]]])
+  mc.BATCH_SIZE            = 32
 
   mc.WEIGHT_DECAY          = 0.0001 #0.00001
+
+  mc.LR_DECAY_TYPE         = 'exponential'
   mc.LEARNING_RATE         = 0.001
-  mc.DECAY_STEPS           = 30000
   mc.LR_DECAY_FACTOR       = 0.5
+  mc.DECAY_STEPS           = 40000  #30*cfg.TRAING_NUMBER/cfg.BATCH_SIZE #epoch_number
+  
+  '''
+  mc.LR_DECAY_TYPE         = 'fixed'
+  mc.LEARNING_RATE         = 0.00001
+  '''
+
+  '''
+  mc.LR_DECAY_TYPE         = 'polynomial'
+  mc.LEARNING_RATE         = 0.001
+  mc.END_LEARNING_RATE     = 0.000001
+  mc.DECAY_STEPS           = 100
+  '''
+
   mc.MAX_GRAD_NORM         = 1.0 #1.0
   mc.MOMENTUM              = 0.9
   mc.CLIP_GRAD             = False
@@ -30,7 +45,7 @@ def vkitti_SSD_config():
   cal_prior_param(mc)
 
   mc.BACKGROUD_ID         = 0
-  mc.TOP_N_DETECTION      = 400
+  mc.TOP_N_DETECTION      = 400#400
   mc.PROB_THRESH          = 0.01
   mc.NMS_THRESH           = 0.45
   mc.PLOT_PROB_THRESH     = 0.4
@@ -70,7 +85,7 @@ def vkitti_SSD_config():
   mc.ADD_WEIGHT_DECAY_TO_LOSS = True
 
   mc.NUM_THREAD            = 4
-  mc.QUEUE_CAPACITY        = 128
+  mc.QUEUE_CAPACITY        = 256
 
   return mc
 

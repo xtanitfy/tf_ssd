@@ -134,23 +134,20 @@ class imdb(object):
       # load the image
       
       im = cv2.imread(self._image_path_at(idx)).astype(np.float32, copy=False)
-      #im -= mc.BGR_MEANS
       batch_image.append(im)
       orig_h, orig_w, _ = [float(v) for v in im.shape]
 
       #print self._rois[idx]
       labels = np.array([b[4] for b in self._rois[idx][:]])
 
-      #print ('----->labels:',labels)
-      #raw_input('pause')
-      
       gt_bbox = np.array([[b[0], b[1], b[2], b[3]] for b in self._rois[idx][:]])
       for i in range(0,len(labels)):
         #print ('labels[i]:',labels[i])
         label_id = int(labels[i])
 
         batch_gt_labels[batch_id].append(label_id)
-        bbox = bbox_transform(gt_bbox[i])
+        #bbox = bbox_transform(gt_bbox[i])
+        bbox = gt_bbox[i]
         bbox[0] /=  orig_w
         bbox[2] /=  orig_w
         bbox[1] /=  orig_h

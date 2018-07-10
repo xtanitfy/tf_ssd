@@ -80,7 +80,6 @@ class kitti(imdb):
         lines = f.readlines()
       f.close()
 
-      #print ('filename:',filename)
       bboxes = []
       for line in lines:
         obj = line.strip().split(' ')
@@ -89,23 +88,22 @@ class kitti(imdb):
         except:
           continue
 
-        #print ('cls_idx:{} class_name:{}'.format(cls,obj[0].lower().strip()))
         if self.mc.EXCLUDE_HARD_EXAMPLES and _get_obj_level(obj) > 3:
           continue
         xmin = float(obj[4])
         ymin = float(obj[5])
         xmax = float(obj[6])
         ymax = float(obj[7])
-        #print ('{} {} {} {}'.format(xmin,ymin,xmax,ymax))
         assert xmin >= 0.0 and xmin <= xmax, \
             'Invalid bounding box x-coord xmin {} or xmax {} at {}.txt' \
                 .format(xmin, xmax, index)
         assert ymin >= 0.0 and ymin <= ymax, \
             'Invalid bounding box y-coord ymin {} or ymax {} at {}.txt' \
                 .format(ymin, ymax, index)
-        x, y, w, h = bbox_transform_inv([xmin, ymin, xmax, ymax])
-        bboxes.append([x, y, w, h, cls])
-
+        #x, y, w, h = bbox_transform_inv([xmin, ymin, xmax, ymax])
+        #bboxes.append([x, y, w, h, cls])
+        bboxes.append([xmin, ymin, xmax, ymax,cls])
+        
       idx2annotation[index] = bboxes
 
     return idx2annotation

@@ -207,6 +207,30 @@ class ModelSkeleton:
     """NN architecture specification."""
     raise NotImplementedError
 
+
+  def _configure_learning_rate(self,mc,global_step):
+    if mc.LR_DECAY_TYPE == 'exponential':
+      return tf.train.exponential_decay(mc.LEARNING_RATE,
+                                        global_step,
+                                        mc.DECAY_STEPS,
+                                        mc.LR_DECAY_FACTOR,
+                                        staircase=True,
+                                        name='exponential_decay_learning_rate')
+    elif mc.LR_DECAY_TYPE == 'fixed':
+      return tf.constant(mc.LEARNING_RATE, name='fixed_learning_rate')
+      
+    elif mc.LR_DECAY_TYPE == 'polynomial':
+      return tf.train.polynomial_decay(mc.LEARNING_RATE,
+                                       global_step,
+                                       mc.DECAY_STEPS,
+                                       mc.END_LEARNING_RATE,
+                                       power=1.0,
+                                       cycle=False,
+                                       name='polynomial_decay_learning_rate')
+    else:
+      raise ValueError('learning_rate_decay_type [%s] was not recognized',
+                       FLAGS.learning_rate_decay_type)
+                     
   def _add_interpretation_graph(self):
     """Interpret NN output."""
     mc = self.mc

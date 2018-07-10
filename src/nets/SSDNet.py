@@ -324,12 +324,16 @@ class SSDNet(ModelSkeleton):
     
     mc = self.mc
     self.global_step = tf.Variable(0, name='global_step', trainable=False)
+
+    self.lr = self._configure_learning_rate(mc,self.global_step)
+    '''
     self.lr = tf.train.exponential_decay(mc.LEARNING_RATE,
                       self.global_step,
                       mc.DECAY_STEPS,
                       mc.LR_DECAY_FACTOR,
                       staircase=True)
-
+    '''
+    
     optimizer = tf.train.MomentumOptimizer(learning_rate=self.lr, momentum=mc.MOMENTUM)
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
